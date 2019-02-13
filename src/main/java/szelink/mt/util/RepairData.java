@@ -45,11 +45,13 @@ public class RepairData {
      */
     public void repair(File bakFile, String beginBinlog, Long beginPos, String endBinlog, Long endPos) {
         // 1.删除上一次恢复数据时执行的sql文件
-        deleteLastSqlFile();
+        if (TemporaryVariable.LAST_TIME_REPAIR_SQL_FILE != null) {
+            deleteLastSqlFile();
+        }
         // 2.记录当前的执行的sql文件夹路径
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        String sqlDirName = sdf.format(new Date());
-        String file = config.getPath() + File.separator + "sql" + File.separator;
+        String sqlDirName = CommonUtil.uuid();
+        String file = config.getPath() + "sql" + File.separator;
         File sqlRoot = new File(file);
         if (!sqlRoot.exists()) {
             sqlRoot.mkdir();
@@ -64,7 +66,7 @@ public class RepairData {
         if (beginBinlog.equalsIgnoreCase(endBinlog)) {
             // 起始位置和结束位置在同一个文件中
             String absoluteBeginBinlog = config.getOriginPath() + "\\" + beginBinlog;
-            String destFile = file + beginBinlog + ".sql";
+            String destFile = sqlDir + File.separator + beginBinlog + ".sql";
             JdbcUtils.exportSql(absoluteBeginBinlog, beginPos, endPos, destFile);
         } else {
             // 起始位置和结束位置不在同一个文件中
@@ -78,7 +80,7 @@ public class RepairData {
             }
             for (int i = index; i < indexs.size(); i++) {
                 BinlogFileInfo tempInfo = indexs.get(i);
-                String destFile = file + tempInfo.getBinlogName()+".sql";
+                String destFile = sqlDir + File.separator + tempInfo.getBinlogName()+".sql";
                 String allBinlogName = config.getOriginPath() + "\\" + tempInfo.getBinlogName();
                 if (i == index) {
                     // 第一个

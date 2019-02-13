@@ -108,10 +108,15 @@
         layer.open({
             type: 2,
             title  : "排除sql",
-            area: ['1000px', '400px'],
+            area: ['1000px', '600px'],
             shadeClose: false,
             anim: 2,
-            content: url
+            content: url,
+            cancel: function(index, layero) {
+                // 关闭该层时,清空session中的sql数据
+                cleanExcludeSqls();
+                layer.close(index)
+            }
         });
     }
 
@@ -133,5 +138,16 @@
             }
         });
     });
+
+    /**
+     * 清空session中 sql 数据
+     */
+    function cleanExcludeSqls() {
+        var url = "/bak/cleanSql";
+        $.ajax({
+            type : "get",
+            url : url
+        });
+    }
 </script>
 </html>

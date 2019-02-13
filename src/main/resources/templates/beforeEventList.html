@@ -25,7 +25,10 @@
     <div>请选择需要排除的sql语句(被排除的sql语句在数据恢复过程中将不会恢复)</div>
     <div class="toolbar">
         <div class="toolbar-block">
-            <button type="button" class="btn btn-primary float-right" th:onclick="repair()"><i class="iconfont">&#xe639;</i>点击恢复数据</button>
+            <button type="button" class="btn btn-primary float-left" th:onclick="">查看已经排除掉的sql</button>
+        </div>
+        <div class="toolbar-block">
+            <button type="button" class="btn btn-primary float-left" th:onclick="repair()">点击恢复数据</button>
         </div>
     </div>
     <div class="main">
@@ -61,14 +64,15 @@
             <tbody>
             <tr th:each="event,iter : ${events}" class="even">
                 <td>
-                    <div><input type="checkbox" name="exclude" th:id="${event.id}" th:onclick=""/></div>
+                    <div>
+                        <input type="checkbox" name="exclude" th:id="${event.id}" th:checked="${#arrays.contains(session.excludeSqls,event.id)}" th:onclick="selectExcludes([[${event.id}]])"/>
+                    </div>
                 </td>
                 <td th:text="${iter.count}"></td>
                 <div th:if="${event.bigSql != true}">
                     <td th:text="${idSqlPair[event.id]}"></td>
                 </div>
                 <div th:if="${event.bigSql == true}">
-                    <div></div>
                     <td>
                         <a th:href="@{/bak/bigsql(binlog=${event.binlogFileName},startPos=${event.startPosition})}">sql过大,请点击下载查看</a>
                     </td>
@@ -81,23 +85,7 @@
             </tr>
             </tbody>
         </table>
-        <div class="space-H20" id="tabpages"></div>
-        <div>
-            <div class="table table-default table-data">
-                <div class="even">
-                    排除掉的sql
-                </div>
-                <div class="even" id="sql"></div>
-                <div class="even" id="file"></div>
-                <div class="even" id="time"></div>
-                <div class="even" id="startPos"></div>
-                <div class="even" id="stopPos"></div>
-            </div>
-        </div>
         <div id="page" class="text-center"></div>
-        <div id="exclude">
-
-        </div>
     </div>
 </div>
 
@@ -121,5 +109,33 @@
             }
         });
     });
+
+    /**
+     * 将用户选择的sql id存入后端列表中
+     * @param sqlId
+     */
+    function selectExcludes(sqlId) {
+        var url = "/bak/exclude?id=" + sqlId;
+        $.ajax({
+           type : "get",
+           url : url,
+           success : function (data) {
+           }
+        });
+    }
+
+    /**
+     * 展示用户选择了的sql语句
+     */
+    function showExcludeSqls() {
+
+    }
+
+    /**
+     * 恢复数据(不恢复用户已经排除了sql)
+     */
+    function repair() {
+        window.location.href = "/bak/repair";
+    }
 </script>
 </html>

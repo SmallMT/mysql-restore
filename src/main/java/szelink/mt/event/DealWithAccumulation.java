@@ -63,6 +63,7 @@ public class DealWithAccumulation {
     }
 
     void backAfterStart() {
+        logger.info("==========开机备份初始数据库文件开始...==========");
         BinlogInfo binlogInfo = JdbcUtils.queryBinlog();
         Date date = new Date();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
@@ -82,13 +83,15 @@ public class DealWithAccumulation {
         DataBackUpInfo info = new DataBackUpInfo();
         info.setId(TemporaryVariable.DATA_BACKUP_ID);
         info.setBackUpTime(date);
-        info.setFileName(fileName);
-        String filePath = config.getPath() + "\\" + fileName;
+        info.setFileName(fileName + "." +type.toString());
+        String filePath = config.getPath() + "\\" + fileName + "." +type.toString();
         info.setFilePath(filePath);
         info.setSize(new File(filePath).length());
         info.setBinlogFileName(binlogInfo.getFileName());
         info.setPosition(binlogInfo.getPosition());
         backUpService.save(info);
+        logger.info("==========开机备份初始数据库文件成功==========");
+
     }
 
     private void connect(String startBinlogName, Long startPos, String stopBinlogName, Long stopPos) {

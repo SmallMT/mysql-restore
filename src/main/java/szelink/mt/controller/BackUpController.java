@@ -22,12 +22,11 @@ import szelink.mt.util.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author mt
@@ -38,6 +37,18 @@ import java.util.Map;
 public class BackUpController {
 
     private static final Logger logger = LoggerFactory.getLogger(BackUpController.class);
+
+    /**
+     * 此list中存放了恢复数据时,用户选择排除掉(不执行的sql) id
+     */
+    private static final List<String> excludeSqls = new LinkedList<>();
+
+    /**
+     * 排除掉的sql 列表在session中的键名
+     */
+    private static final String SESSION_EXCLUDE_SQLS = "excludeSqls";
+
+    private static String REFERENCE_ID = "";
 
     @Autowired
     @Qualifier("dataBackUpService")
@@ -80,12 +91,27 @@ public class BackUpController {
     }
 
     @GetMapping("/repair")
-    @ResponseBody
     public String repair() {
-        File zipFile = new File("E:\\databak\\2018-12-12-10-52-57.zip");
-        repair.repair(zipFile, "mysql-bin.000001", 120L,
-                "mysql-bin.000001", 726L);
-        return "数据恢复成功!!!!";
+        // 查找最近一次整体备份的文件
+        DataBackUpInfo dataBackUpInfo = backUpservice.getOldestInfo();
+        BinlogEventInfo reference = eventService.queryEventInfoById(REFERENCE_ID);
+        String filePath = dataBackUpInfo.getFilePath();
+        File hasBackupFile = new File(dataBackUpInfo.getFilePath());
+        if (excludeSqls.size() == 0) {
+            // 没有选择排除的sql语句
+            repair.repair(hasBackupFile, dataBackUpInfo.getBinlogFileName(), dataBackUpInfo.getPosition(),
+                    reference.getBinlogFileName(), reference.getEndPosition());
+        } else {
+            // 选择了排除不执行的sql语句
+        }
+        // 2.导出需要执行的sql语句
+        // 3.根据最近的一次备份来进行数据恢复
+        // 4.清空h2数据库中的event信息
+
+//        File zipFile = new File("E:\\databak\\2018-12-12-10-52-57.zip");
+//        repair.repair(zipFile, "mysql-bin.000001", 120L,
+//                "mysql-bin.000001", 726L);
+        return "redirect:/bak/events";
     }
 
     /**
@@ -204,12 +230,37 @@ public class BackUpController {
         List<BinlogEventInfo> befores = eventService.queryEventsBefore(reference, skip, num);
         Map<String,String> idSqlPair = new HashMap<>(16);
         dealWithSql(befores, idSqlPair);
+        REFERENCE_ID = eventId;
         model.addAttribute("refId", eventId);
         model.addAttribute("events", befores);
         model.addAttribute("idSqlPair", idSqlPair);
         model.addAttribute("curr", curr);
         model.addAttribute("count", beforeNum);
+        HttpSession session = request.getSession();
+        if (session.getAttribute(SESSION_EXCLUDE_SQLS) == null) {
+            session.setAttribute(SESSION_EXCLUDE_SQLS, excludeSqls);
+        }
         return "beforeEventList";
+    }
+
+    /**
+     * 将页面中用户选择排除的id存入列表中
+     * @param id 用户选择的id
+     */
+    @GetMapping("/exclude")
+    @ResponseBody
+    public void dealWithExcludeSqls(@RequestParam("id") String id) {
+        if (excludeSqls.contains(id)) {
+            excludeSqls.remove(id);
+        } else {
+            excludeSqls.add(id);
+        }
+    }
+
+    @GetMapping("/cleanSql")
+    @ResponseBody
+    public void cleanExcludeSqls() {
+        excludeSqls.clear();
     }
 
     /**
@@ -244,7 +295,6 @@ public class BackUpController {
 
         return "导出数据库文件成功!!!";
     }
-
 
     private void dealWithSql(List<BinlogEventInfo> events, Map<String,String> idSqlPair) {
         if (events != null && !events.isEmpty()) {
