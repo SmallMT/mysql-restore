@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" >
+<head>
+    <base target="_self"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="MSThemeCompatible" content="no" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="-1" />
+    <meta http-equiv="Cache-Control" content="no-cache" />
+    <meta http-equiv="Page-Enter" content="blendTrans(Duration=0.5)" />
+    <link rel="stylesheet" th:href="@{~/css/es.css}">
+    <link rel="stylesheet" th:href="@{~/layui/css/layui.css}">
+    <script type="text/javascript" th:src="@{~/js/jquery.min.js}"></script>
+    <script th:src="@{~/layui/layui.all.js}"></script>
+</head>
+
+<body>
+<div class="tab-content">
+    <input id="refId" type="hidden" th:value="${refId}">
+    <input id="count" type="hidden" th:value="${count}"/>
+    <input id="curr" type="hidden" th:value="${curr}">
+    <div>请选择需要排除的sql语句(被排除的sql语句在数据恢复过程中将不会恢复)</div>
+    <div class="toolbar">
+        <div class="toolbar-block">
+            <button type="button" class="btn btn-primary float-right" th:onclick="repair()"><i class="iconfont">&#xe639;</i>点击恢复数据</button>
+        </div>
+    </div>
+    <div class="main">
+        <table class="table table-default table-data">
+            <thead>
+            <tr>
+                <th width="50" id="excludeTh">
+                    排除sql
+                </th>
+                <th width="50">
+                    序号
+                </th>
+                <th>
+                    sql
+                </th>
+                <th>
+                    binlog名称
+                </th>
+                <th>
+                    sql执行时间
+                </th>
+                <th >
+                    起始位置
+                </th>
+                <th>
+                    结束位置
+                </th>
+                <th>
+                    数据库服务ID
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="event,iter : ${events}" class="even">
+                <td>
+                    <div><input type="checkbox" name="exclude" th:id="${event.id}" th:onclick=""/></div>
+                </td>
+                <td th:text="${iter.count}"></td>
+                <div th:if="${event.bigSql != true}">
+                    <td th:text="${idSqlPair[event.id]}"></td>
+                </div>
+                <div th:if="${event.bigSql == true}">
+                    <div></div>
+                    <td>
+                        <a th:href="@{/bak/bigsql(binlog=${event.binlogFileName},startPos=${event.startPosition})}">sql过大,请点击下载查看</a>
+                    </td>
+                </div>
+                <td th:text="${event.binlogFileName}"></td>
+                <td th:text="${event.binlogDate}"></td>
+                <td th:text="${event.startPosition}"></td>
+                <td th:text="${event.endPosition}"></td>
+                <td th:text="${event.serverId}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="space-H20" id="tabpages"></div>
+        <div>
+            <div class="table table-default table-data">
+                <div class="even">
+                    排除掉的sql
+                </div>
+                <div class="even" id="sql"></div>
+                <div class="even" id="file"></div>
+                <div class="even" id="time"></div>
+                <div class="even" id="startPos"></div>
+                <div class="even" id="stopPos"></div>
+            </div>
+        </div>
+        <div id="page" class="text-center"></div>
+        <div id="exclude">
+
+        </div>
+    </div>
+</div>
+
+</body>
+<script th:inline="javascript">
+
+    layui.use('laypage', function() {
+        var count = $("#count").val();
+        var laypage = layui.laypage;
+        laypage.render({
+            elem : 'page',
+            count : count,
+            limit : 10,
+            curr : $("#curr").val(),
+            jump: function(obj, first) {
+                var skip = (obj.curr - 1) * obj.limit;
+                // 首次不执行
+                if(!first) {
+                    window.location.href = "/bak/eventBefore?id="+ $("#refId").val() + "&skip=" + skip + "&num=" + obj.limit + "&curr=" + obj.curr;
+                }
+            }
+        });
+    });
+</script>
+</html>

@@ -1,0 +1,25 @@
+server:
+  port: 8081
+  servlet:
+    context-path: /
+spring:
+  datasource:
+    url: jdbc:h2:E:/mysqlbackup/h2/bak_data #内置h2数据库地址
+    username: sa
+    password: 123
+    driver-class-name: org.h2.Driver
+    platform: h2
+  h2:
+    console:
+      enabled: true #启动h2 web console 访问路径/h2-console
+  jpa:
+    show-sql: true #打印sql语句
+    hibernate:
+      ddl-auto: update
+#项目配置
+data:
+  bak:
+    path: E:\databak\ #mysql备份文件存放目录
+    origin-path: D:\MySql\data\data\ #原mysql data目录
+    num: 2 #mysql备份文件的个数
+    backup-cycle: 30 #mysql备份周期(每隔多长时间备份一次)

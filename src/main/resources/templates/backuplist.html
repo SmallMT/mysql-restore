@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" >
+<head>
+    <base target="_self"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="MSThemeCompatible" content="no" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="-1" />
+    <meta http-equiv="Cache-Control" content="no-cache" />
+    <meta http-equiv="description" content="upath" />
+    <meta http-equiv="Page-Enter" content="blendTrans(Duration=0.5)" />
+    <meta http-equiv="keywords" content="com.upath.plat.common.modules.model.TCommonSubkeys@5dbb5dfc" />
+    <meta http-equiv="description" content="upath" />
+    <link href="../skins/promote/image/favicon.ico" rel="shortcut icon">
+    <link rel="stylesheet" th:href="@{~/skins/promote/style/es.css}">
+    <link rel="stylesheet" href="../skins/promote/style/custom.css">
+    <script type="text/javascript" src="../scripts/common/orgcascade.js"></script>
+    <script type="text/javascript" src="../scripts/common/jquery.js"></script>
+    <script type="text/javascript" src="../scripts/jquery-latest.js"></script>
+    <style type="text/css"></style>
+</head>
+
+<body>
+<div class="tab-content">
+    <div class="toolbar">
+        <div class="toolbar-block">
+            <button type="button" class="btn btn-primary float-right" onclick="showBinlog()"><i class="iconfont">&#xe639;</i>查看当前binlog日志</button>
+        </div>
+    </div>
+	<div class="main">
+		<table class="table table-default table-data">
+		<thead>
+		<tr>
+			<th width="50">
+				序号
+			</th>
+			<th>
+				文件名称
+			</th>
+			<th>
+				文件完成路径
+			</th>
+			<th >
+				备份时间
+			</th>
+			<th>
+				文件大小
+			</th>
+		</tr>
+		</thead>
+		<tbody>
+		<tr th:each="info,iter : ${infos}" class="even">
+			<td th:text="${iter.count}">
+                <!--<input type="hidden" th:value="${info.id}">-->
+			</td>
+			<td th:text="${info.fileName}">
+			</td>
+			<td th:text="${info.filePath}">
+
+			</td>
+			<td th:text="${info.backUpTime}">
+
+			</td>
+			<td th:text="${info.size}">
+			</td>
+		</tr>
+		</tbody>
+		</table>
+		<div class="space-H20" id="tabpages"></div>
+
+	    </div>
+    </div>
+
+</body>
+<script th:inline="javascript">
+    function showBinlog() {
+        window.location.href = "/bak/showbinlog";
+    }
+</script>
+</html>

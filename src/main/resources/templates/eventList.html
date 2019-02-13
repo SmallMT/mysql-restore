@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" >
+<head>
+    <base target="_self"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="MSThemeCompatible" content="no" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="-1" />
+    <meta http-equiv="Cache-Control" content="no-cache" />
+    <meta http-equiv="Page-Enter" content="blendTrans(Duration=0.5)" />
+    <link rel="stylesheet" th:href="@{~/css/es.css}">
+    <link rel="stylesheet" th:href="@{~/layui/css/layui.css}">
+    <script th:src="@{~/js/jquery.min.js}"></script>
+    <script th:src="@{~/layui/layui.all.js}"></script>
+
+</head>
+
+<body>
+<div class="tab-content">
+    恢复的数据不包含恢复点的数据
+    <div>
+        <button type="button" class="" th:onclick="repair()">点击恢复数据</button>
+    </div>
+    <div class="main">
+        <input id="count" type="hidden" th:value="${count}"/>
+        <input id="curr" type="hidden" th:value="${curr}">
+        <table class="layui-table">
+            <colgroup>
+                <col width="150">
+                <col width="200">
+                <col>
+            </colgroup>
+            <thead>
+            <tr>
+                <th width="50">
+                    恢复点位
+                </th>
+                <th width="50">
+                    序号
+                </th>
+                <th>
+                    sql
+                </th>
+                <th>
+                    binlog名称
+                </th>
+                <th>
+                    sql执行时间
+                </th>
+                <th >
+                    起始位置
+                </th>
+                <th>
+                    结束位置
+                </th>
+                <th>
+                    数据库服务ID
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="event,iter : ${events}" class="even">
+                <td>
+                    <div><input type="radio" name="bakpos" th:onclick="selectRepairId([[${event.id}]])"/></div>
+                </td>
+                <td th:text="${iter.count}"></td>
+                <div th:if="${event.bigSql != true}">
+                    <td th:text="${idSqlPair[event.id]}"></td>
+                </div>
+                <div th:if="${event.bigSql == true}">
+                    <div></div>
+                    <td>
+                        <a th:href="@{/bak/bigsql(binlog=${event.binlogFileName},startPos=${event.startPosition})}">sql过大,请点击下载查看</a>
+                    </td>
+                </div>
+                <td th:text="${event.binlogFileName}"></td>
+                <td th:text="${event.binlogDate}"></td>
+                <td th:text="${event.startPosition}"></td>
+                <td th:text="${event.endPosition}"></td>
+                <td th:text="${event.serverId}"></td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="space-H20" id="tabpages"></div>
+        <div id="page" class="text-center"></div>
+    </div>
+</div>
+
+</body>
+<script th:inline="javascript">
+
+    var eventId;
+
+    function selectRepairId(id) {
+        eventId = id;
+    }
+
+
+    function repair() {
+        if (eventId == undefined || eventId === "" || eventId.length === 0) {
+            layer.msg('请先选择恢复点位!!!');
+            return;
+        }
+        var url = "/bak/eventBefore?id=" + eventId;
+        layer.open({
+            type: 2,
+            title  : "排除sql",
+            area: ['1000px', '400px'],
+            shadeClose: false,
+            anim: 2,
+            content: url
+        });
+    }
+
+    layui.use('laypage', function() {
+        var count = $("#count").val();
+        var laypage = layui.laypage;
+        laypage.render({
+            elem : 'page',
+            count : count,
+            limit : 10,
+            curr : $("#curr").val(),
+            jump: function(obj, first) {
+                var skip = (obj.curr - 1) * obj.limit;
+                // 首次不执行
+                if(!first){
+                    //do something
+                    window.location.href = "/bak/events?skip=" + skip + "&num=" + obj.limit + "&curr=" + obj.curr;
+                }
+            }
+        });
+    });
+</script>
+</html>
