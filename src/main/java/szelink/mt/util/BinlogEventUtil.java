@@ -5,7 +5,6 @@ import com.github.shyiko.mysql.binlog.BinaryLogFileReader;
 import com.github.shyiko.mysql.binlog.event.*;
 import com.github.shyiko.mysql.binlog.event.deserialization.ChecksumType;
 import com.github.shyiko.mysql.binlog.event.deserialization.EventDeserializer;
-import com.github.shyiko.mysql.binlog.jmx.BinaryLogClientStatistics;
 import szelink.mt.constant.ConfigConstant;
 import szelink.mt.constant.CustomizeConstant;
 
