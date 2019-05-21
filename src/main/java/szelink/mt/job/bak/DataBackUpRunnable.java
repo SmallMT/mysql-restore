@@ -64,8 +64,6 @@ public class DataBackUpRunnable implements Runnable {
         }
         logger.info("==========开始备份文件==========");
         // 3.1.备份mysql文件,并记录入库
-        // 重置备份文件信息的id(此步骤必不可少)
-        TemporaryVariable.DATA_BACKUP_ID = CommonUtil.uuid();
         Date date = new Date();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
         String fileName = sdf.format(date);
@@ -77,13 +75,19 @@ public class DataBackUpRunnable implements Runnable {
         }
         try {
             DataBackUpUtil.backup(config.getOriginPath(), config.getPath(), fileName, type);
+            // 上一次备份的文件信息
+            DataBackUpInfo lastInfo = backUpService.getLastInfo();
+            // 如果存在上一次备份的信息,则删除旧的信息
+            if (lastInfo != null) {
+                backUpService.removeLastInfo(lastInfo);
+            }
         } catch (IOException e) {
             logger.error("==========压缩文件失败==========");
             e.printStackTrace();
         }
         // 3.2.生成备份信息,入库
         DataBackUpInfo info = new DataBackUpInfo();
-        info.setId(TemporaryVariable.DATA_BACKUP_ID);
+        info.setId(CommonUtil.uuid());
         info.setBackUpTime(date);
         info.setFileName(fileName);
         String filePath = config.getPath() + "\\" + fileName;
@@ -92,22 +96,6 @@ public class DataBackUpRunnable implements Runnable {
         info.setBinlogFileName(lastFilename);
         info.setPosition(lastPosition);
         backUpService.save(info);
-        // 3.3删除多余的备份文件
-        if (backUpService.count() > config.getNum()) {
-            logger.info("==========开始处理多余的备份文件==========");
-            DataBackUpInfo lastTimeInfo = backUpService.getLastTimeInfo(info.getBackUpTime());
-            List<DataBackUpInfo> infos = backUpService.getInfosLessThan(lastTimeInfo.getBackUpTime());
-            for (DataBackUpInfo oldInfo : infos) {
-                // 1)删除库中旧的备份信息
-                backUpService.deleteById(oldInfo.getId());
-                // 2)删除备份的文件
-                FileUtils.deleteQuietly(new File(oldInfo.getFilePath()));
-                // 3)删除和备份文件相关的event信息
-                eventService.deleteByBakId(oldInfo.getId());
-            }
-            logger.info("==========完成处理多余的备份文件==========");
-        }
-
         logger.info("==========完成文件备份==========");
         // 4.开启binlog 检测进程
         ThreadPoolExecutor executor = new ThreadPoolExecutor(5, 10, 2000L, TimeUnit.MILLISECONDS,
@@ -134,4 +122,5 @@ public class DataBackUpRunnable implements Runnable {
             e.printStackTrace();
         }
     }
+
 }

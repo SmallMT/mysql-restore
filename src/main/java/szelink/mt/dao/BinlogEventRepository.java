@@ -43,14 +43,6 @@ public interface BinlogEventRepository extends JpaRepository<BinlogEventInfo,Str
     BinlogEventInfo recentBinlog(@Param("binlog") String binlog);
 
     /**
-     * 根据bak id删除 event 信息
-     * @param bakId
-     */
-    @Modifying
-    @Query(value = "delete from BinlogEventInfo  info where info.bakId=:bakId")
-    void deleteByBakId(@Param("bakId") String bakId);
-
-    /**
      * 查询binlog 名称为 binlog 并且开始位置大于等于 start,结束位置小于等于 end 的事件 每次查询2000条
      * @param binlog
      * @param start

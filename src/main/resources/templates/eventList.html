@@ -20,7 +20,7 @@
 
 <body>
 <div class="tab-content">
-    恢复的数据不包含恢复点的数据
+    恢复的数据包含恢复点的数据
     <div>
         <button type="button" class="" th:onclick="repair()">点击恢复数据</button>
     </div>
@@ -98,26 +98,26 @@
         eventId = id;
     }
 
-
+    var parentIndex;
     function repair() {
         if (eventId == undefined || eventId === "" || eventId.length === 0) {
             layer.msg('请先选择恢复点位!!!');
             return;
         }
         var url = "/bak/eventBefore?id=" + eventId;
-        layer.open({
-            type: 2,
-            title  : "排除sql",
-            area: ['1000px', '600px'],
-            shadeClose: false,
-            anim: 2,
-            content: url,
-            cancel: function(index, layero) {
-                // 关闭该层时,清空session中的sql数据
-                cleanExcludeSqls();
-                layer.close(index)
-            }
-        });
+        parentIndex = layer.open({
+                        type: 2,
+                        title  : "排除sql",
+                        area: ['1000px', '600px'],
+                        shadeClose: false,
+                        anim: 2,
+                        content: url,
+                        cancel: function(index, layero) {
+                            // 关闭该层时,清空session中的sql数据
+                            cleanExcludeSqls();
+                            layer.close(index)
+                        }
+                    });
     }
 
     layui.use('laypage', function() {

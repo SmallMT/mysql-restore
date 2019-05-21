@@ -86,7 +86,6 @@ public class BinlogEventListener implements BinaryLogClient.EventListener {
                 info.setServerId(headerV4.getServerId());
                 info.setBinlogDate(new Date(headerV4.getTimestamp()));
                 info.setStartPosition(headerV4.getPosition());
-                info.setBakId(TemporaryVariable.DATA_BACKUP_ID);
             } else {
                 // 这是DDL语句,这组事件仅由一个事件组成
                 checkSql(data.getSql());
@@ -99,7 +98,6 @@ public class BinlogEventListener implements BinaryLogClient.EventListener {
                 info.setStartPosition(headerV4.getPosition());
                 info.setEndPosition(headerV4.getNextPosition());
                 info.setBinlogDate(new Date(headerV4.getTimestamp()));
-                info.setBakId(TemporaryVariable.DATA_BACKUP_ID);
                 dealWithSql(info, data.getSql());
                 eventService.save(info);
                 doAtLast();

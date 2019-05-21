@@ -68,11 +68,6 @@ public class BinlogEventInfo {
     @Column(name = "is_big")
     private boolean bigSql;
 
-    /**
-     * 上一次备份文件的信息主键
-     */
-    @Column(name = "bak_id",length = 32)
-    private String bakId;
 
     /**
      * 该条记录入库时间(以时间戳的形式存入,为了便于使用时间比较)

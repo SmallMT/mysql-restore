@@ -1,5 +1,6 @@
 package szelink.mt.service;
 
+import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Sort;
@@ -8,7 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import szelink.mt.dao.DataBackUpRepository;
 import szelink.mt.entity.DataBackUpInfo;
 
-import java.util.Date;
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -48,16 +50,26 @@ public class DataBackUpService {
         return count.intValue();
     }
 
-    public DataBackUpInfo getOldestInfo() {
-        return dao.getOldestInfo();
+    /**
+     * 获取上一次备份的文件信息
+     * @return
+     */
+    public DataBackUpInfo getLastInfo() {
+        return dao.getLastInfo();
     }
 
-    public List<DataBackUpInfo> getInfosLessThan(Date date) {
-        return dao.getInfosLessThan(date);
-    }
-
-    public DataBackUpInfo getLastTimeInfo(Date date) {
-        return dao.getLastTimeInfo(date);
+    /**
+     * 删除上一次备份的文件相关信息(删除数据库中的信息以及备份的文件)
+     */
+    public void removeLastInfo(DataBackUpInfo last) {
+        // 1.删除数据库中的信息
+        dao.deleteById(last.getId());
+        // 2.删除备份的文件
+        try {
+            FileUtils.forceDelete(new File(last.getFilePath()));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

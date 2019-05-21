@@ -9,7 +9,6 @@ import szelink.mt.entity.BinlogEventInfo;
 import szelink.mt.entity.BinlogFileInfo;
 import szelink.mt.util.JdbcUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -42,24 +41,12 @@ public class BinlogEventService {
     }
 
     /**
-     * 根据 备份文件内容删除一系列的事件
-     * @param bakId
-     */
-    public void deleteByBakId(String bakId) {
-        dao.deleteByBakId(bakId);
-    }
-
-    /**
      * 根据id查询某个event信息
      * @param eventId
      * @return
      */
     public BinlogEventInfo queryEventInfoById(String eventId) {
         return dao.findById(eventId).get();
-    }
-
-    public List<BinlogEventInfo> queryEventInfo(String binlog, Long startPos, Long endPos) {
-        return new ArrayList<>(20);
     }
 
     /**
@@ -72,17 +59,6 @@ public class BinlogEventService {
         return infos;
     }
 
-    public List<BinlogEventInfo> eventInfos(Long saveTime, int num) {
-        return null;
-    }
-
-    /**
-     *
-     * @param reference 参照点
-     *
-     * @return 前15条信息
-     */
-
     /**
      * 查询 参照点之前的事件信息
      * @param reference 参照点
@@ -91,7 +67,6 @@ public class BinlogEventService {
      * @return
      */
     public List<BinlogEventInfo> queryEventsBefore(BinlogEventInfo reference, int skip, int num) {
-
         return dao.eventsBefore(reference.getBinlogFileName(), reference.getStartPosition(), skip, num);
     }
 
@@ -110,5 +85,12 @@ public class BinlogEventService {
      */
     public Long countsAll() {
         return dao.count();
+    }
+
+    /**
+     * 清空所有的event
+     */
+    public void clear() {
+        dao.deleteAll();
     }
 }

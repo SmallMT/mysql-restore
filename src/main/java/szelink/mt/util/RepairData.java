@@ -9,14 +9,14 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import szelink.mt.config.DataBackUpConfig;
 import szelink.mt.constant.CustomizeConstant;
+import szelink.mt.entity.BinlogEventInfo;
 import szelink.mt.entity.BinlogFileInfo;
 import szelink.mt.entity.BinlogInfo;
 import szelink.mt.event.EventChangeRunner;
+import szelink.mt.service.BinlogEventService;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -34,6 +34,10 @@ public class RepairData {
     @Qualifier("backUpConfig")
     private DataBackUpConfig config;
 
+    @Autowired
+    @Qualifier("binlogEventService")
+    private BinlogEventService eventService;
+
     /**
      * 从bakFile 备份文件中恢复从[beginBinlog.beginPos,endBinlog.endPos]区间内的数据
      *
@@ -49,7 +53,6 @@ public class RepairData {
             deleteLastSqlFile();
         }
         // 2.记录当前的执行的sql文件夹路径
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String sqlDirName = CommonUtil.uuid();
         String file = config.getPath() + "sql" + File.separator;
         File sqlRoot = new File(file);
@@ -63,10 +66,46 @@ public class RepairData {
             sqlDir.mkdir();
         }
         // 3.从原来的binlog文件中导出需要恢复的sql语句
+        exportSql(beginBinlog, beginPos, endBinlog, endPos, curSqlFile);
+        restore(bakFile, sqlDir);
+    }
+
+
+    public void repair(File bakFile, String beginBinlog, Long beginPos, BinlogEventInfo reference, List<BinlogEventInfo> excludes) {
+        // 1.删除上一次恢复数据时执行的sql文件
+        if (TemporaryVariable.LAST_TIME_REPAIR_SQL_FILE != null) {
+            deleteLastSqlFile();
+        }
+        // 2.记录当前的执行的sql文件夹路径
+        String sqlDirName = CommonUtil.uuid();
+        String file = config.getPath() + "sql" + File.separator;
+        File sqlRoot = new File(file);
+        if (!sqlRoot.exists()) {
+            sqlRoot.mkdir();
+        }
+        String curSqlFile = file + sqlDirName + File.separator;
+        TemporaryVariable.LAST_TIME_REPAIR_SQL_FILE = curSqlFile;
+        File sqlDir = new File(curSqlFile);
+        if (!sqlDir.exists()) {
+            sqlDir.mkdir();
+        }
+        // 3.导出sql
+        for (BinlogEventInfo event : excludes) {
+            exportSql(beginBinlog, beginPos, event.getBinlogFileName(), event.getStartPosition(), curSqlFile);
+            beginBinlog = event.getBinlogFileName();
+            beginPos = event.getEndPosition();
+        }
+        exportSql(beginBinlog, beginPos, reference.getBinlogFileName(), reference.getEndPosition(), curSqlFile);
+        // 4.恢复数据
+        restore(bakFile, sqlDir);
+    }
+
+    private void exportSql(String beginBinlog, Long beginPos, String endBinlog, Long endPos, String sqlDir) {
+        String filling = Long.toString(System.currentTimeMillis());
         if (beginBinlog.equalsIgnoreCase(endBinlog)) {
             // 起始位置和结束位置在同一个文件中
             String absoluteBeginBinlog = config.getOriginPath() + "\\" + beginBinlog;
-            String destFile = sqlDir + File.separator + beginBinlog + ".sql";
+            String destFile = sqlDir + File.separator + beginBinlog + "-" + filling + ".sql";
             JdbcUtils.exportSql(absoluteBeginBinlog, beginPos, endPos, destFile);
         } else {
             // 起始位置和结束位置不在同一个文件中
@@ -80,7 +119,7 @@ public class RepairData {
             }
             for (int i = index; i < indexs.size(); i++) {
                 BinlogFileInfo tempInfo = indexs.get(i);
-                String destFile = sqlDir + File.separator + tempInfo.getBinlogName()+".sql";
+                String destFile = sqlDir + File.separator + tempInfo.getBinlogName() + "-" + filling + ".sql";
                 String allBinlogName = config.getOriginPath() + "\\" + tempInfo.getBinlogName();
                 if (i == index) {
                     // 第一个
@@ -94,7 +133,9 @@ public class RepairData {
                 }
             }
         }
-        // 4.停止binlog监测服务
+    }
+
+    private void restore(File bakFile, File sqlDir) {
         BinaryLogClient client = EventChangeRunner.getMonitorEventChange().getClient();
         closeBinlogClient(client);
         // 5.停止数据库服务
@@ -103,11 +144,14 @@ public class RepairData {
         replaceData(bakFile, config.getOriginPath());
         // 7.重启mysql服务
         JdbcUtils.startMysql();
-        // 8.重置mysql binlog监测工具
+        // 8.清除h2数据库中的相关数据
+        eventService.clear();
+        // 9.重置mysql binlog监测工具
         startBinlogClient(client);
-        // 9.执行导出的sql文件,完成数据还原
+        // 10.执行导出的sql文件,完成数据还原
         JdbcUtils.executeSql(sqlDir);
     }
+
 
     private void deleteLastSqlFile() {
         if (TemporaryVariable.LAST_TIME_REPAIR_SQL_FILE != null) {
@@ -123,8 +167,6 @@ public class RepairData {
             }
         }
     }
-
-
 
     /**
      * 替换原数据库data文件夹
@@ -154,7 +196,7 @@ public class RepairData {
         BinlogInfo info = JdbcUtils.queryBinlog();
         client.setBinlogFilename(info.getFileName());
         client.setBinlogPosition(info.getPosition());
-        new Thread(new Runnable() {
+        Thread th = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -166,7 +208,13 @@ public class RepairData {
                     e.printStackTrace();
                 }
             }
-        }).start();
+        });
+        th.start();
+        try {
+            Thread.sleep(3000L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
 }

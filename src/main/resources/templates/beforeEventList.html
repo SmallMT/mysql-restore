@@ -70,7 +70,7 @@
                 </td>
                 <td th:text="${iter.count}"></td>
                 <div th:if="${event.bigSql != true}">
-                    <td th:text="${idSqlPair[event.id]}"></td>
+                    <td th:text="${idSqlPair[event.id]}" th:title="${idSqlPair[event.id]}"></td>
                 </div>
                 <div th:if="${event.bigSql == true}">
                     <td>
@@ -135,7 +135,19 @@
      * 恢复数据(不恢复用户已经排除了sql)
      */
     function repair() {
-        window.location.href = "/bak/repair";
+        var load = layer.load();
+        var url = "/bak/repair";
+        $.ajax({
+            type : "get",
+            url : url,
+            success : function () {
+                // layer.closeAll();
+                layer.close(load);
+                parent.location.reload();
+                var parentIndex = parent.layer.getFrameIndex(window.name);
+                parent.layer.close(parentIndex);
+            }
+        });
     }
 </script>
 </html>

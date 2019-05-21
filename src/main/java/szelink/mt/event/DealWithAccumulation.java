@@ -63,7 +63,7 @@ public class DealWithAccumulation {
     }
 
     void backAfterStart() {
-        logger.info("==========开机备份初始数据库文件开始...==========");
+        logger.info("==========备份初始数据库文件开始...==========");
         BinlogInfo binlogInfo = JdbcUtils.queryBinlog();
         Date date = new Date();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
@@ -76,12 +76,18 @@ public class DealWithAccumulation {
         }
         try {
             DataBackUpUtil.backup(config.getOriginPath(), config.getPath(), fileName, type);
+            // 上一次备份的文件信息
+            DataBackUpInfo lastInfo = backUpService.getLastInfo();
+            // 如果存在上一次备份的信息,则删除旧的信息
+            if (lastInfo != null) {
+                backUpService.removeLastInfo(lastInfo);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
         // 3.2.生成备份信息,入库
         DataBackUpInfo info = new DataBackUpInfo();
-        info.setId(TemporaryVariable.DATA_BACKUP_ID);
+        info.setId(CommonUtil.uuid());
         info.setBackUpTime(date);
         info.setFileName(fileName + "." +type.toString());
         String filePath = config.getPath() + "\\" + fileName + "." +type.toString();
@@ -90,8 +96,11 @@ public class DealWithAccumulation {
         info.setBinlogFileName(binlogInfo.getFileName());
         info.setPosition(binlogInfo.getPosition());
         backUpService.save(info);
-        logger.info("==========开机备份初始数据库文件成功==========");
-
+        logger.info("==========备份初始数据库文件成功==========");
+//        // 4.删除多余的备份文件
+//        if (backUpService.count() > config.getNum()) {
+//            new DataBackUpRunnable().removeExtra(date);
+//        }
     }
 
     private void connect(String startBinlogName, Long startPos, String stopBinlogName, Long stopPos) {

@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -55,9 +54,6 @@ public class BackUpController {
     private DataBackUpService backUpservice;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @Autowired
     private RepairData repair;
 
     @Autowired
@@ -80,22 +76,13 @@ public class BackUpController {
     }
 
 
-    @GetMapping("/showbinlog")
-    @ResponseBody
-    public String showBinlog() throws UnsupportedEncodingException {
-        String sql = "select * from t_event_info_nov where id=  '8e8174f565de48d89048ff6e0de1b2d8'";
-//        SqlRowSet sqlRowSet = jdbcTemplate.queryForRowSet(sql);
-        Map<String,Object> map = jdbcTemplate.queryForMap(sql);
-        byte[] buf = (byte[]) map.get("SQL");
-        return "show binlog page";
-    }
-
     @GetMapping("/repair")
+    @ResponseBody
     public String repair() {
         // 查找最近一次整体备份的文件
-        DataBackUpInfo dataBackUpInfo = backUpservice.getOldestInfo();
+        DataBackUpInfo dataBackUpInfo = backUpservice.getLastInfo();
+        // 用户选择恢复点位信息
         BinlogEventInfo reference = eventService.queryEventInfoById(REFERENCE_ID);
-        String filePath = dataBackUpInfo.getFilePath();
         File hasBackupFile = new File(dataBackUpInfo.getFilePath());
         if (excludeSqls.size() == 0) {
             // 没有选择排除的sql语句
@@ -103,15 +90,38 @@ public class BackUpController {
                     reference.getBinlogFileName(), reference.getEndPosition());
         } else {
             // 选择了排除不执行的sql语句
+            // 根据id找出所有的排除数据
+            List<BinlogEventInfo> excludes = new LinkedList<>();
+            for (String id : excludeSqls) {
+                excludes.add(eventService.queryEventInfoById(id));
+            }
+            // 对这些数据进行排序 先发生的在前,后发生的在后
+            sortExcludes(excludes);
+            // 进行数据恢复
+            repair.repair(hasBackupFile, dataBackUpInfo.getBinlogFileName(), dataBackUpInfo.getPosition(), reference, excludes);
+            // 清除excludes
+            excludes.clear();
         }
-        // 2.导出需要执行的sql语句
-        // 3.根据最近的一次备份来进行数据恢复
-        // 4.清空h2数据库中的event信息
+        return "0";
+    }
 
-//        File zipFile = new File("E:\\databak\\2018-12-12-10-52-57.zip");
-//        repair.repair(zipFile, "mysql-bin.000001", 120L,
-//                "mysql-bin.000001", 726L);
-        return "redirect:/bak/events";
+    private void sortExcludes(List<BinlogEventInfo> excludes) {
+        excludes.sort(new Comparator<BinlogEventInfo>() {
+            @Override
+            public int compare(BinlogEventInfo o1, BinlogEventInfo o2) {
+                if (o1.getBinlogFileName().compareTo(o2.getBinlogFileName()) < 0) {
+                    return -1;
+                } else if (o1.getBinlogFileName().compareTo(o2.getBinlogFileName()) == 0){
+                    if (o1.getStartPosition() < o2.getStartPosition()) {
+                        return -1;
+                    } else {
+                        return 1;
+                    }
+                } else {
+                    return 1;
+                }
+            }
+        });
     }
 
     /**

@@ -39,4 +39,12 @@ public interface DataBackUpRepository extends JpaRepository<DataBackUpInfo,Strin
     @Query(value = "select * from t_backup_info where backup_time < :d order by backup_time desc limit 0,1", nativeQuery = true)
     DataBackUpInfo getLastTimeInfo(@Param("d") Date date);
 
+    /**
+     * 返回最近一次备份文件的信息
+     * @return
+     */
+    @Query(value = "select * from t_backup_info order by backup_time asc limit 0,1", nativeQuery = true)
+    DataBackUpInfo getLastInfo();
+
+
 }
